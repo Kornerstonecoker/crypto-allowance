@@ -15,7 +15,11 @@ app.get("/", (req, res) => {
     res.send("Crypto Allowance API is running 🚀");
 });
 
-const web3 = new Web3(process.env.INFURA_URL);
+const web3 = new Web3(new Web3.providers.HttpProvider(process.env.INFURA_URL));
+const account = web3.eth.accounts.privateKeyToAccount(process.env.PRIVATE_KEY);
+web3.eth.accounts.wallet.add(account);
+web3.eth.defaultAccount = account.address;
+
 const contract = new web3.eth.Contract(contractABI, process.env.CONTRACT_ADDRESS);
 
 // ✅ Route: Get Allowance
@@ -34,17 +38,66 @@ app.get("/allowance/:child", async (req, res) => {
     }
 });
 
-// ⚠️ Note: The following POST routes require a signer wallet to be connected (private key)
-
-// Route: Deposit ETH (disabled for now, requires signer setup)
+// ✅ Route: Deposit ETH
 app.post("/deposit", async (req, res) => {
-    res.status(501).json({ error: "Deposit function requires private key and signer. Not implemented in backend yet." });
+    const { amount } = req.body;
+
+    if (!amount) {
+        return res.status(400).json({ error: "Amount is required" });
+    }
+
+    try {
+        const tx = await contract.methods.depositETH().send({
+            from: account.address,
+            value: web3.utils.toWei(amount.toString(), "ether"),
+            gas: 200000
+        });
+
+        res.json({ message: "Deposit successful", txHash: tx.transactionHash });
+    } catch (err) {
+        console.error("Deposit error:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
-// Route: Withdraw ETH (disabled for now, requires signer setup)
+// ✅ Route: Withdraw ETH
 app.post("/withdraw", async (req, res) => {
-    res.status(501).json({ error: "Withdraw function requires private key and signer. Not implemented in backend yet." });
+    try {
+        const tx = await contract.methods.withdrawETH().send({
+            from: account.address,
+            gas: 200000
+        });
+
+        res.json({ message: "Withdraw successful", txHash: tx.transactionHash });
+    } catch (err) {
+        console.error("Withdraw error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ✅ Route: Set Allowance for a child
+app.post("/set-allowance", async (req, res) => {
+    const { child, amount } = req.body;
+
+    if (!child || !amount) {
+        return res.status(400).json({ error: "Child address and amount are required" });
+    }
+
+    try {
+        const tx = await contract.methods.setAllowance(child, web3.utils.toWei(amount, "ether")).send({
+            from: account.address,
+            gas: 200000,
+        });
+
+        res.json({ message: "Allowance set", txHash: tx.transactionHash });
+    } catch (err) {
+        console.error("SetAllowance error:", err);
+        res.status(500).json({ error: err.message });
+    }
 });
 
 const PORT = process.env.PORT || 5000;
+console.log("INFURA_URL:", process.env.INFURA_URL);
+console.log("CONTRACT_ADDRESS:", process.env.CONTRACT_ADDRESS);
+
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
