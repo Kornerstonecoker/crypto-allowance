@@ -1,0 +1,11 @@
+/* src/App.css */
+.App {
+  text-align: center;
+  font-family: sans-serif;
+  padding: 2rem;
+}
+
+button {
+  padding: 10px 20px;
+  font-size: 16px;
+}

@@ -3,6 +3,7 @@ const { Web3 } = require("web3");
 const dotenv = require("dotenv");
 const cors = require("cors");
 const contractABI = require("./contractABI.json");
+const userRegistryABI = require("./userRegistryABI.json"); // 👈 NEW
 
 dotenv.config();
 
@@ -10,7 +11,6 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-// Optional homepage route
 app.get("/", (req, res) => {
     res.send("Crypto Allowance API is running 🚀");
 });
@@ -21,6 +21,7 @@ web3.eth.accounts.wallet.add(account);
 web3.eth.defaultAccount = account.address;
 
 const contract = new web3.eth.Contract(contractABI, process.env.CONTRACT_ADDRESS);
+const userRegistry = new web3.eth.Contract(userRegistryABI, process.env.USER_REGISTRY_ADDRESS); // 👈 NEW
 
 // ✅ Route: Get Allowance
 app.get("/allowance/:child", async (req, res) => {
@@ -96,8 +97,59 @@ app.post("/set-allowance", async (req, res) => {
     }
 });
 
+// ✅ Register as Parent
+app.post("/register-parent", async (req, res) => {
+    try {
+        const tx = await userRegistry.methods.registerParent().send({
+            from: account.address,
+            gas: 200000
+        });
+
+        res.json({ message: "Parent registered", txHash: tx.transactionHash });
+    } catch (err) {
+        console.error("Register Parent error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ✅ Register as Child
+app.post("/register-child", async (req, res) => {
+    try {
+        const tx = await userRegistry.methods.registerChild().send({
+            from: account.address,
+            gas: 200000
+        });
+
+        res.json({ message: "Child registered", txHash: tx.transactionHash });
+    } catch (err) {
+        console.error("Register Child error:", err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ✅ Check if Address is Parent
+app.get("/is-parent/:address", async (req, res) => {
+    try {
+        const isParent = await userRegistry.methods.isParent(req.params.address).call();
+        res.json({ isParent });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
+// ✅ Check if Address is Child
+app.get("/is-child/:address", async (req, res) => {
+    try {
+        const isChild = await userRegistry.methods.isChild(req.params.address).call();
+        res.json({ isChild });
+    } catch (err) {
+        res.status(500).json({ error: err.message });
+    }
+});
+
 const PORT = process.env.PORT || 5000;
 console.log("INFURA_URL:", process.env.INFURA_URL);
 console.log("CONTRACT_ADDRESS:", process.env.CONTRACT_ADDRESS);
+console.log("USER_REGISTRY_ADDRESS:", process.env.USER_REGISTRY_ADDRESS);
 
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
