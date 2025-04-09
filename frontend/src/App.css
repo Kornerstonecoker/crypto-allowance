@@ -1,11 +1,119 @@
 /* src/App.css */
-.App {
-  text-align: center;
-  font-family: sans-serif;
-  padding: 2rem;
+body {
+  background-color: #121212;
+  color: #f0f0f0;
+  font-family: 'Segoe UI', sans-serif;
 }
 
-button {
-  padding: 10px 20px;
-  font-size: 16px;
+h1,
+h2,
+h3,
+h4,
+h5 {
+  color: #ffffff;
+}
+
+.container {
+  max-width: 800px;
+  margin: auto;
+}
+
+/* Card Styling */
+.card {
+  background-color: #1e1e1e;
+  border: none;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0, 0, 0, 0.3);
+  color: #f0f0f0;
+}
+
+/* Button Styles */
+.btn-primary,
+.btn-success {
+  background-color: #00b894;
+  border-color: #00b894;
+  color: #fff;
+  transition: background-color 0.2s ease;
+}
+
+.btn-primary:hover,
+.btn-success:hover {
+  background-color: #00a383;
+  border-color: #00997a;
+}
+
+.btn-outline-danger {
+  border-color: #ff7675;
+  color: #ff7675;
+  transition: all 0.2s ease;
+}
+
+.btn-outline-danger:hover {
+  background-color: #ff7675;
+  color: white;
+}
+
+/* Input & Select Styling */
+input.form-control,
+select.form-select {
+  background-color: #2c2c2c;
+  color: #ffffff;
+  border: 1px solid #444;
+  transition: all 0.2s ease-in-out;
+}
+
+input.form-control::placeholder,
+select.form-select::placeholder {
+  color: #b0b0b0;
+}
+
+input.form-control:focus,
+select.form-select:focus {
+  background-color: #000;
+  color: #ffffff;
+  border-color: #00cec9;
+  outline: none;
+}
+
+/* Alerts */
+.alert {
+  background-color: #2c3e50;
+  border-left: 5px solid #00cec9;
+  color: #d1ecf1;
+}
+
+.alert-success {
+  background-color: #14532d;
+  color: #d4edda;
+  border-left: 5px solid #00b894;
+}
+
+.alert-info {
+  background-color: #1e3a5f;
+  color: #d0e6f6;
+  border-left: 5px solid #2980b9;
+}
+
+/* Table Styling */
+.table {
+  color: #ffffff;
+}
+
+.table td,
+.table th {
+  color: #ffffff !important;
+  background-color: #1a1a1a;
+  border-color: #444;
+}
+
+/* Muted Text */
+.text-muted {
+  color: #bbbbbb !important;
+}
+
+/* Wallet Highlight */
+span.text-dark {
+  color: #00e5ff !important;
+  font-weight: 500;
+  word-break: break-word;
 }
