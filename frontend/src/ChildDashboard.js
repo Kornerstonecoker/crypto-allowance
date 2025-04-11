@@ -1,4 +1,3 @@
-// src/ChildDashboard.js
 import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
 
@@ -9,6 +8,7 @@ function ChildDashboard({ wallet }) {
     const [labels, setLabels] = useState({});
     const [editingLabel, setEditingLabel] = useState(null);
     const [newLabel, setNewLabel] = useState("");
+    const [balance, setBalance] = useState(null);
 
     const STORAGE_KEY = `labels_${wallet}`;
 
@@ -19,11 +19,8 @@ function ChildDashboard({ wallet }) {
             try {
                 const res = await fetch(`${BACKEND_URL}/transactions/${wallet}`);
                 const data = await res.json();
-
                 if (data.transactions) {
                     setTransactions(data.transactions);
-
-                    // Load saved labels from localStorage
                     const savedLabels = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
                     setLabels(savedLabels);
                 }
@@ -32,7 +29,18 @@ function ChildDashboard({ wallet }) {
             }
         };
 
+        const fetchBalance = async () => {
+            try {
+                const res = await fetch(`${BACKEND_URL}/balance/${wallet}`);
+                const data = await res.json();
+                setBalance(data.balance);
+            } catch (err) {
+                console.error("❌ Failed to fetch balance:", err);
+            }
+        };
+
         fetchTransactions();
+        fetchBalance();
 
         const socket = io(BACKEND_URL);
         socket.on("new-allowance", (tx) => {
@@ -54,7 +62,6 @@ function ChildDashboard({ wallet }) {
         const updatedTx = transactions.map((tx) =>
             tx.from === address ? { ...tx, label: newLabel } : tx
         );
-
         setLabels(updatedLabels);
         setTransactions(updatedTx);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedLabels));
@@ -70,6 +77,10 @@ function ChildDashboard({ wallet }) {
             <p>
                 <strong>Connected Wallet:</strong>{" "}
                 <span className="text-info">{wallet}</span>
+            </p>
+            <p>
+                <strong>Balance:</strong>{" "}
+                {balance ? `${balance} ETH` : "Loading..."}
             </p>
 
             {transactions.length === 0 ? (
@@ -92,8 +103,7 @@ function ChildDashboard({ wallet }) {
                                 <tr key={i}>
                                     <td title={tx.from}>{shortenAddress(tx.from)}</td>
                                     <td>
-                                        {tx.amountEth} ETH / $
-                                        {tx.amountUsd?.toFixed(2) || "—"}
+                                        {tx.amountEth} ETH / ${tx.amountUsd?.toFixed(2) || "—"}
                                     </td>
                                     <td>{new Date(tx.timestamp).toLocaleString()}</td>
                                     <td>

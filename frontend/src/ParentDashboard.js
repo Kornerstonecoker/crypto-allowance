@@ -50,8 +50,8 @@ function ParentDashboard({ wallet }) {
             const data = await res.json();
             if (res.ok) {
                 setStatus(`✅ Sent ${amount} ETH to ${childName}`);
-                updateHistory(childName, childAddress, amount);
-                logTransactionToChild(childAddress, amount);
+                updateHistory(childName, childAddress, amount, data.txHash);
+                logTransactionToChild(childAddress, amount, data.txHash);
                 setChildName("");
                 setChildAddress("");
                 setAmount("");
@@ -65,7 +65,7 @@ function ParentDashboard({ wallet }) {
         }
     };
 
-    const logTransactionToChild = (child, amountEth) => {
+    const logTransactionToChild = (child, amountEth, txHash) => {
         const childKey = `childTransactions_${child}`;
         const oldTxs = JSON.parse(localStorage.getItem(childKey) || "[]");
 
@@ -74,21 +74,27 @@ function ParentDashboard({ wallet }) {
             amountEth: parseFloat(amountEth),
             amountUsd: ethPrice ? parseFloat(amountEth) * ethPrice : null,
             timestamp: Date.now(),
-            txHash: "0x" + Math.random().toString(16).slice(2), // Replace with real tx if needed
+            txHash,
         };
 
         const updatedTxs = [...oldTxs, newTx];
         localStorage.setItem(childKey, JSON.stringify(updatedTxs));
     };
 
-    const updateHistory = (name, address, amount) => {
+    const updateHistory = (name, address, amount, txHash) => {
         const updated = [...history];
         const existing = updated.find((entry) => entry.child === address);
 
         if (existing) {
             existing.total += parseFloat(amount);
+            existing.txHash = txHash;
         } else {
-            updated.push({ name, child: address, total: parseFloat(amount) });
+            updated.push({
+                name,
+                child: address,
+                total: parseFloat(amount),
+                txHash,
+            });
         }
 
         setHistory(updated);
@@ -116,6 +122,8 @@ function ParentDashboard({ wallet }) {
 
     const formattedUsd = (ethAmount) =>
         ethPrice ? (ethAmount * ethPrice).toFixed(2) : "...";
+
+    const shorten = (str) => `${str.slice(0, 6)}...${str.slice(-4)}`;
 
     return (
         <div className="mt-4">
@@ -165,6 +173,7 @@ function ParentDashboard({ wallet }) {
                                 <th>Child Name</th>
                                 <th>Child Address</th>
                                 <th>Total Sent</th>
+                                <th>TX Link</th>
                                 <th>Edit</th>
                             </tr>
                         </thead>
@@ -188,10 +197,31 @@ function ParentDashboard({ wallet }) {
                                         )}
                                     </td>
                                     <td title={entry.child}>
-                                        {entry.child.slice(0, 6)}...{entry.child.slice(-4)}
+                                        <a
+                                            href={`https://sepolia.etherscan.io/address/${entry.child}`}
+                                            target="_blank"
+                                            rel="noreferrer"
+                                            className="text-info"
+                                        >
+                                            {shorten(entry.child)}
+                                        </a>
                                     </td>
                                     <td>
                                         {entry.total.toFixed(4)} ETH / ${formattedUsd(entry.total)}
+                                    </td>
+                                    <td>
+                                        {entry.txHash ? (
+                                            <a
+                                                href={`https://sepolia.etherscan.io/tx/${entry.txHash}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="text-warning"
+                                            >
+                                                {shorten(entry.txHash)}
+                                            </a>
+                                        ) : (
+                                            <span className="text-muted">—</span>
+                                        )}
                                     </td>
                                     <td>
                                         {entry.editing ? (
