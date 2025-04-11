@@ -7,12 +7,15 @@ import { ethers } from "ethers";
 import userRegistryABI from "./userRegistryABI.json";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
+import { io } from "socket.io-client"; // ✅ NEW
 
 const USER_REGISTRY_ADDRESS = "0xB87c9822065C798Fda1A34A521DF3391B26df4Dd";
+const SOCKET_SERVER_URL = "http://localhost:5000"; // ✅ Update this if deploying
 
 function App() {
   const [wallet, setWallet] = useState("");
   const [role, setRole] = useState("");
+  const [socket, setSocket] = useState(null); // ✅ NEW
 
   const connectWallet = async () => {
     if (window.ethereum) {
@@ -64,6 +67,11 @@ function App() {
   useEffect(() => {
     if (wallet) {
       checkUserRole(wallet);
+
+      const newSocket = io(SOCKET_SERVER_URL);
+      setSocket(newSocket);
+
+      return () => newSocket.disconnect(); // ✅ clean up
     }
   }, [wallet]);
 
@@ -104,7 +112,7 @@ function App() {
 
           {role === "child" && (
             <div className="card p-4 mb-4">
-              <ChildDashboard wallet={wallet} />
+              <ChildDashboard wallet={wallet} socket={socket} /> {/* ✅ Pass socket */}
             </div>
           )}
         </>

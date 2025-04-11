@@ -1,4 +1,8 @@
+// src/ChildDashboard.js
 import React, { useEffect, useState } from "react";
+import { io } from "socket.io-client";
+
+const BACKEND_URL = "http://localhost:5000"; // Change on deploy
 
 function ChildDashboard({ wallet }) {
     const [transactions, setTransactions] = useState([]);
@@ -6,23 +10,38 @@ function ChildDashboard({ wallet }) {
     const [editingLabel, setEditingLabel] = useState(null);
     const [newLabel, setNewLabel] = useState("");
 
+    const STORAGE_KEY = `labels_${wallet}`;
+
     useEffect(() => {
         if (!wallet) return;
 
-        const key = `childTransactions_${wallet}`;
-        const stored = localStorage.getItem(key);
-        if (stored) {
-            const parsed = JSON.parse(stored);
-            setTransactions(parsed);
+        const fetchTransactions = async () => {
+            try {
+                const res = await fetch(`${BACKEND_URL}/transactions/${wallet}`);
+                const data = await res.json();
 
-            const savedLabels = {};
-            parsed.forEach((tx) => {
-                if (tx.label) {
-                    savedLabels[tx.from] = tx.label;
+                if (data.transactions) {
+                    setTransactions(data.transactions);
+
+                    // Load saved labels from localStorage
+                    const savedLabels = JSON.parse(localStorage.getItem(STORAGE_KEY)) || {};
+                    setLabels(savedLabels);
                 }
-            });
-            setLabels(savedLabels);
-        }
+            } catch (err) {
+                console.error("❌ Failed to fetch transactions:", err);
+            }
+        };
+
+        fetchTransactions();
+
+        const socket = io(BACKEND_URL);
+        socket.on("new-allowance", (tx) => {
+            if (tx.to.toLowerCase() === wallet.toLowerCase()) {
+                setTransactions((prev) => [tx, ...prev]);
+            }
+        });
+
+        return () => socket.disconnect();
     }, [wallet]);
 
     const handleLabelEdit = (address) => {
@@ -36,11 +55,9 @@ function ChildDashboard({ wallet }) {
             tx.from === address ? { ...tx, label: newLabel } : tx
         );
 
-        const key = `childTransactions_${wallet}`;
-        localStorage.setItem(key, JSON.stringify(updatedTx));
-
         setLabels(updatedLabels);
         setTransactions(updatedTx);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedLabels));
         setEditingLabel(null);
         setNewLabel("");
     };
@@ -51,15 +68,16 @@ function ChildDashboard({ wallet }) {
         <div className="mt-4">
             <h3>🧒 Child Dashboard</h3>
             <p>
-                <strong>Connected Wallet:</strong> {wallet}
+                <strong>Connected Wallet:</strong>{" "}
+                <span className="text-info">{wallet}</span>
             </p>
 
             {transactions.length === 0 ? (
-                <p>No transactions yet.</p>
+                <div className="alert alert-info">No transactions yet.</div>
             ) : (
                 <div className="card p-3">
                     <h5>📥 Received Allowance</h5>
-                    <table className="table table-bordered table-dark table-hover mt-2">
+                    <table className="table table-dark table-bordered table-hover mt-2">
                         <thead>
                             <tr>
                                 <th>From</th>
@@ -73,7 +91,10 @@ function ChildDashboard({ wallet }) {
                             {transactions.map((tx, i) => (
                                 <tr key={i}>
                                     <td title={tx.from}>{shortenAddress(tx.from)}</td>
-                                    <td>{tx.amountEth} ETH / ${tx.amountUsd?.toFixed(2) || "—"}</td>
+                                    <td>
+                                        {tx.amountEth} ETH / $
+                                        {tx.amountUsd?.toFixed(2) || "—"}
+                                    </td>
                                     <td>{new Date(tx.timestamp).toLocaleString()}</td>
                                     <td>
                                         {editingLabel === tx.from ? (
