@@ -1,7 +1,10 @@
 import React, { useEffect, useState } from "react";
 import { io } from "socket.io-client";
+import { ethers } from "ethers";
+import contractABI from "./contractABI.json"; // adjust path if needed
 
-const BACKEND_URL = "http://localhost:5000"; // Change on deploy
+const BACKEND_URL = process.env.REACT_APP_BACKEND_URL || "http://localhost:5000";
+const CONTRACT_ADDRESS = "0x854f2838Ee8Eeecc8FEc913074D8deFA3c69b175"; // from your .env
 
 function ChildDashboard({ wallet }) {
     const [transactions, setTransactions] = useState([]);
@@ -9,6 +12,7 @@ function ChildDashboard({ wallet }) {
     const [editingLabel, setEditingLabel] = useState(null);
     const [newLabel, setNewLabel] = useState("");
     const [balance, setBalance] = useState(null);
+    const [statusMsg, setStatusMsg] = useState("");
 
     const STORAGE_KEY = `labels_${wallet}`;
 
@@ -52,6 +56,29 @@ function ChildDashboard({ wallet }) {
         return () => socket.disconnect();
     }, [wallet]);
 
+    const handleWithdraw = async () => {
+        if (!window.ethereum || !wallet) return;
+
+        try {
+            const provider = new ethers.BrowserProvider(window.ethereum);
+            const signer = await provider.getSigner();
+            const contract = new ethers.Contract(CONTRACT_ADDRESS, contractABI, signer);
+
+            const allowance = await contract.getAllowance(wallet);
+            if (allowance.toString() === "0") {
+                setStatusMsg("⚠️ No allowance available to withdraw.");
+                return;
+            }
+
+            const tx = await contract.withdrawETH();
+            await tx.wait();
+            setStatusMsg("✅ Withdrawal successful!");
+        } catch (err) {
+            console.error("❌ Withdrawal failed:", err);
+            setStatusMsg("❌ Withdrawal failed. See console for details.");
+        }
+    };
+
     const handleLabelEdit = (address) => {
         setEditingLabel(address);
         setNewLabel(labels[address] || "");
@@ -78,10 +105,16 @@ function ChildDashboard({ wallet }) {
                 <strong>Connected Wallet:</strong>{" "}
                 <span className="text-info">{wallet}</span>
             </p>
-            <p>
-                <strong>Balance:</strong>{" "}
-                {balance ? `${balance} ETH` : "Loading..."}
-            </p>
+            <div className="d-flex align-items-center justify-content-between">
+                <p>
+                    <strong>Balance:</strong>{" "}
+                    {balance ? `${balance} ETH` : "Loading..."}
+                </p>
+                <button className="btn btn-warning btn-sm" onClick={handleWithdraw}>
+                    Withdraw
+                </button>
+            </div>
+            {statusMsg && <div className="alert alert-info">{statusMsg}</div>}
 
             {transactions.length === 0 ? (
                 <div className="alert alert-info">No transactions yet.</div>
